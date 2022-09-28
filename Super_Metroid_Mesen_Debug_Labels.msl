@@ -134,6 +134,7 @@ PRG:08EB:Write_800h_bytes_of_@A@_to_7E_3000
 PRG:08FE:Write_800h_bytes_of_@A@_to_7E_4000
 PRG:0911:Write_800h_bytes_of_@A@_to_7E_6000
 PRG:0924:Handle_fading_out
+PRG:094D:Handle_fading_in_80894D
 PRG:096E:Finalise_OAM
 PRG:0B1A:Clear_high_OAM
 PRG:0B4F:Queue_mode_7_transfers
@@ -218,6 +219,7 @@ PRG:1E89:Process_timer_@_timer_running@_moved_into_place
 PRG:1E8C:Timer_@_@A_high@_minutes@_@A_low@_seconds
 PRG:1E93:Clear_timer_RAM
 PRG:1EA9:Decrement_timer
+PRG:1F6C:Draw_timer_828373
 PRG:1F95:Draw_two_timer_digits
 PRG:1FB3:Draw_timer_spritemap
 PRG:1FD4:Timer_spritemap_data
@@ -311,15 +313,50 @@ PRG:DF1A:Area_select_background_tilemap_@_Maridia
 PRG:E71A:Area_select_background_tilemap_@_Tourian
 PRG:FF00:Thanks_Genji@
 PRG:10000:Game_state_6@1Fh@28h_@loading_game_data_@_set_up_new_game_@_transition_to_demo@
+PRG:1000B:: \n If [game state] = 28h (transition to demo):
+PRG:1001D:BRANCH_NOT_DEMO
+PRG:10032:BRANCH_ZEBES_LANDING
+PRG:10041:BRANCH_CERES
+PRG:1004E:BRANCH_ON_ZEBES
+PRG:1005F:BRANCH_GAMEPLAY
+PRG:1006B:: \n Target Samus palette = [Samus palette]
+PRG:10083:: \n Screen fade delay/counter = 1
+PRG:100A8:: \n If [game state] = 28h (transition to demo):
+PRG:100BC:: Queue song 0 music track
+PRG:100C9:LOOP_ALPHA
+PRG:100D6:: loading game data -> setting game up after loading the game
+PRG:100E2:: \n Palettes = [target palettes]
+PRG:100F3:BRANCH_NOT_ZEBES_LANDING
+PRG:100F9:LOOP_BETA
+PRG:10106:: \n Game state = 7 (setting game up after loading the game)
+PRG:1012B::  If starting at Ceres:
+PRG:10130:: Sprite palette 5, colour Fh = 0
+PRG:10146:BRANCH_DEMO
+PRG:10159:: \n Execute [[$876C + demo set * 2] + (demo scene index - 1) * 12h + 10h]
+PRG:1017E:: Game state = 29h (transition to demo)
+PRG:1018A:: \n Palettes = [target palettes]
 PRG:1019B:Initialise_IO_registers_for_gameplay
 PRG:101A4:Initialise_CPU_registers_for_gameplay
 PRG:101DD:Initialise_PPU_registers_for_gameplay
-PRG:102C5:Load_initial_palette
+PRG:102C5:Load_initial_palette:; Palette loaded when loading a save or demo.\n; Nothing is displayed during this time, so it's unclear why this palette is loaded at all
 PRG:102E2:Load_standard_BG3_tiles_and_sprite_tiles@_clear_tilemaps
+PRG:102E5:: \n VRAM $4000..4FFF (BG3 tiles and BG2 tilemap) = [$9A:B200..D1FF]
+PRG:10305:: \n VRAM $6000..7FFF (sprite tiles) = [$9A:D200..11FF] (size is completely wrong, goes through free space and wraps into RAM)
+PRG:10325:: \n VRAM $5000..57FF (BG1 tilemap) = [$7E:4000..4FFF] (see $82A9)
+PRG:10345:: \n VRAM $5800..5BFF (BG3 tilemap) = [$7E:4000..47FF] (see $82A9)
 PRG:10367:Game_state_20h_@made_it_to_Ceres_elevator@
+PRG:1036D:: If [timer status] != inactive:
+PRG:1037D:: Game state = 21h (blackout from Ceres)
 PRG:10388:Game_state_21h_@blackout_from_Ceres@
 PRG:10411:Game_state_23h_@time_up@
+PRG:1041A:: Palette change denominator = 8
+PRG:10421:: If reached target colour:
+PRG:10426:: Game state = 24h (whiting out from time up)
 PRG:10431:Game_state_24h_@whiting_out_from_time_up@
+PRG:104A0:: $1A8D..1B8C = 00FEh
+PRG:104AA:: Game state = 19h (Samus ran out of health, black out)
+PRG:104AF:BRANCH_NOT_ZEBES_TIMEBOMB
+PRG:104B2:: Game state = 25h (Ceres goes boom with Samus)
 PRG:104BD:Game_state_26h_@Samus_escapes_from_Zebes@
 PRG:1052D:Game_state_29h_@transition_to_demo@
 PRG:10548:Game_state_2Ah_@playing_demo@
@@ -337,6 +374,7 @@ PRG:1093E:: DB = $82
 PRG:10941:: Game state = 0 (reset/start)
 PRG:10944:: Spare CPU display flag = 0
 PRG:10947:: Enable IRQ
+PRG:10948:: first byte of the stack = $81
 PRG:10957:: OAM stack pointer = 0
 PRG:1095A:: \n Clear Samus tiles transfer flags
 PRG:10963:: \n Execute [$8981 + [game state] * 2]
@@ -353,11 +391,19 @@ PRG:10A90:Sound_state_4_@_reset_sound_state
 PRG:10A9A:Reset_sound_queues
 PRG:10AB0:Show_spare_CPU_@debug@_and_update_previous_controller_1_input
 PRG:10AE4:Game_state_0_@reset@start@
+PRG:10AFE:: play the newly unlocked demo first
+PRG:10B04:: Game state = 1 (opening)
 PRG:10B08:Game_state_1_@opening@
 PRG:10B0D:Game_state_3_@nothing@
-PRG:10B18:Increment_game_state
+PRG:10B18:Unused_Increment_game_state
 PRG:10B20:Game_state_7_@setting_game_up_after_loading_the_game@
+PRG:10B3A:: Game state = 8 (main gameplay)
+PRG:10B3F:Game_state_1Ch_unused
 PRG:10B44:Game_state_8_@main_gameplay@
+PRG:10BA0:BRANCH_SKIP_PROCESSING
+PRG:10BB9:: \n; Presumably deletes all options menu objects
+PRG:10BCB:: \n; Pretty sure this creates the object, options menu object?
+PRG:10C2B:: \n; Processes some kind of object instruction list
 PRG:10C5A:Instruction_@_delete@
 PRG:10C64:Instruction_@_sleep@
 PRG:10C6E:Instruction_@_pre@instruction_@_@@Y@@@
@@ -365,8 +411,25 @@ PRG:10C79:Instruction_@_clear_pre@instruction@
 PRG:10C89:Instruction_@_decrement_counter_and_go_to_@@Y@@_if_non@zero
 PRG:10CA1:Draw_options_menu_spritemaps
 PRG:10CCF:Game_state_Ch_@pausing@_normal_gameplay_but_darkening@
+PRG:10CDE:: If not finished fading out: return
+PRG:10CEA:: Game state = Dh (pausing, loading pause screen)
 PRG:10CEF:Game_state_Dh_@pausing@_loading_pause_screen@
+PRG:10CFF:: Disable HDMA
+PRG:10D11:: Execute [pause hook]
+PRG:10D4B:: Game state = Eh (paused, loading pause screen)
+PRG:10D51:Backup_BG2_tilemap_for_pause_menu:; Due to the prefetch glitch, the value read from VRAM after setting the VRAM address is returned twice by $2139 (after which VRAM is read in sequence correctly)\n; The usual workaround is to issue a dummy read from $2139 before doing a read DMA\n; This routine is instead setting the source address to be +1 what it should be, meaning the first read VRAM word is wrong, but the rest of VRAM is read correctly\n; tl;dr: $7E:DF5C is just a copy of $7E:DF5E
+PRG:10D54:: \n $7E:DF5C..EF5B = VRAM BG2 tilemap
+PRG:10D96:Restore_BG2_tilemap_from_pause_screen
+PRG:10DBD:Backup_GFX_state_for_pause_screen
+PRG:10E19:Restore_GFX_state_from_pause_screen
+PRG:10E75:Load_pause_menu_tiles_and_clear_BG2_tilemap:; VRAM $4800..4FFF isn't actually used for anything in the pause screen,\n; so backing it up to $7E:DF5C, clearing it here, and restoring it later is a complete waste of time and memory.\n; I think this backing up + restoring of BG2 miiight have been a workaround for "bug" whereby this VRAM is cleared in $8E75
+PRG:10E78::\n VRAM $0000..1FFF = [$B6:8000..BFFF] (pause menu BG1/2 tiles)
+PRG:10E98:: \n VRAM $2000..2FFF = [$B6:C000..DFFF] (pause menu sprite tiles)
+PRG:10EB8:: \n VRAM $4000..47FF = [$9A:B200..C1FF] (standard BG3 tiles), VRAM $4800..4FFF = 0
+PRG:10EDA:Load_pause_screen_base_tilemaps
 PRG:10F70:Writes_the_number_next_to_your_reserve_amount_in_the_pause_screen
+PRG:10FD4:Backup_gameplay_palettes_and_load_pause_screen_palettes
+PRG:11009:Continue_initialising_pause_menu
 PRG:110C8:Game_state_Eh_@paused@_loading_pause_screen@
 PRG:110E8:Game_state_Fh_@paused@_map_and_item_screens@
 PRG:110FF:Main_pause_routine
@@ -394,7 +457,11 @@ PRG:11727:Crateria
 PRG:11827:Brinstar
 PRG:11927:Norfair
 PRG:11C27:Tourian_@_debug
+PRG:11E27:Setup_map_scrolling_for_pause_menu
+PRG:11EC4:Determine_map_scroll_limits
 PRG:11F45:A_@_@X@_@_8
+PRG:1209A:Setup_PPU_for_pause_menu
+PRG:120F7:Reset_pause_menu_animations
 PRG:1212B:Sets_the_equipment_screen_up
 PRG:1227E:Copy_@16@_bytes_from_@X@_to_@00@
 PRG:1229D:Set_the_palette_of_@16@_bytes_of_@00@_to_@12@
@@ -410,6 +477,7 @@ PRG:12615:Set_pause_screen_button_label_palettes
 PRG:12628:Set_pause_screen_button_label_palettes_@_equipment_screen
 PRG:126DF:Set_pause_screen_button_label_palettes_@_unpausing
 PRG:12796:Set_pause_screen_button_label_palettes_@_map_screen
+PRG:1284D:Update_pause_menu_LRstart_VRAM_tilemap
 PRG:1287D:Unused@_External_draw_equipment_screen_spritemap
 PRG:12881:Draw_pause_screen_spritemap
 PRG:1292B:Causes_the_flashing_for_sprites_in_the_pause_screen
@@ -3011,6 +3079,8 @@ PRG:862DE:Release_Samus_from_Draygon
 PRG:86464:Subtracts_Samuss_horizontal_speed_from_12@14_@moving_left@
 PRG:864AD:Adds_Samuss_horizontal_speed_to_12@14_@moving_right@
 PRG:864E6:Convulated_routine_to_divide_Samuss_horizontal_movement_by_2@@0A66@
+PRG:86692:Samus_Input_Handler_JSR_0A42
+PRG:86722:Samus_Movement_Pausing_Handler_JSR_0A44
 PRG:8694B:Handles_Samus_movement
 PRG:869CE:Handle_periodic_damage_to_Samus
 PRG:86A45:Pause_check
@@ -6854,4 +6924,3 @@ REG:4377:DAS7B:HDMA Indirect Address (Bank)
 REG:4378:A2A7L:HDMA Mid Frame Table Address (Low)
 REG:4379:A2A7H:HDMA Mid Frame Table Address (High)
 REG:437A:NTLR7:HDMA Line Counter
-
