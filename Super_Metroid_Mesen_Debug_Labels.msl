@@ -288,8 +288,10 @@ PRG:891F:Add_spritemap_from_82_C569_table_to_OAM
 PRG:89AE:Add_Samus_spritemap_to_OAM
 PRG:8A37:Add_spritemap_from_93_A1A1_table_to_OAM
 PRG:8A4B:Add_projectile_spritemap_to_OAM
+PRG:8AB8:Add_spritemap_to_OAM_with_base_tile_number_818AB8
+PRG:8B22:Add_spritemap_to_OAM_with_base_tile_number_818B22
 PRG:8B96:Add_spritemap_to_OAM_with_base_tile_number_off@screen
-PRG:8C0A:Add_spritemap_to_OAM_with_base_tile_number
+PRG:8C0A:Add_spritemap_to_OAM_with_base_tile_number_818C0A
 PRG:8C7F:Add_spritemap_to_OAM_with_base_tile_number_offscreen
 PRG:8CF4:Debug_game_over_menu
 PRG:8EE1:Debug_game_over_menu_VRAM_transfer_definitions
@@ -3812,27 +3814,67 @@ PRG:100CD7:Transfer_enemy_tiles_to_VRAM_and_initialise_enemies
 PRG:100D3A:Unused@_Load_enemy_width@_height@_health@_layer_and_bank
 PRG:100D64:Process_enemy_set_@load_palettes_and_enemy_loading_data@
 PRG:100EB6:Determine_which_enemies_to_process
-PRG:100FD4:Main_enemy_routine
+PRG:100FD4:Main_enemy_routine:; If [first unused enemy index] != 0:\n; {\n;     If [enemy index to shake] != FFFFh:\n;         Enemy [enemy index to shake] shake timer = 40h\n;         Enemy index to shake = FFFFh\n;\n;     Interactive enemy indices index = 0 (used for some collision routines)\n;\n;     Active enemy indices index = 0\n;     While [active enemy index] != FFFFh:\n;     {\n;         Enemy index = [active enemy index]\n;         Enemy data pointer = $0F78 + [enemy index]\n;         Enemy AI bank = [enemy bank]\n;\n;         If enemy is tangible:\n;         {\n;             If [enemy invincibility timer] != 0:\n;                 Decrement enemy invincibility timer\n;             Else if sprite interactions enabled:\n;             {\n;                 If time is not frozen and enemy time is not frozen:\n;                     Enemy collision handler\n;                     If [enemy ID] = 0: (enemy was killed?)\n;                         Go to BRANCH_DRAW_ENEMY_END\n;\n;                 If enemy AI is disabled:\n;                     Go to BRANCH_PROCESS_AI_END\n;             }\n;         }\n;\n;         Enable enemy drawing\n;         If time is frozen or enemy time is frozen:\n;             If [enemy time is frozen AI pointer] != 0:\n;                 Enemy AI pointer = [enemy time is frozen AI pointer]\n;                 Execute enemy AI pointer in enemy bank\n;         Else:\n;         {\n;             X = 0\n;             If [enemy AI handler] != 0:\n;                 X = bit index of lowest set bit of enemy AI handler\n;\n;             Enemy AI pointer = [[enemy ID] + 18h + [X] * 2]\n;             Execute enemy AI pointer in enemy bank\n;             Increment enemy frame counter\n;             If enemy processes instructions:\n;                 Enemy processing stage = 2\n;                 Process enemy instructions\n;         }\n;\n;         BRANCH_PROCESS_AI_END:\n;         If enemy AI is disabled:\n;             If [enemy flash timer] = 1 or [enemy frozen timer] = 1:\n;                 Enemy $7E:7002 = 0\n;                 Death animation\n;\n;         If (enemy is on-screen or enemy uses extended spritemap format) and enemy is not deleted and enemy is not invisible and enemy drawing is enabled:\n;             Add enemy to drawing queue\n;\n;         BRANCH_DRAW_ENEMY_END:\n;         If [enemy flash timer] != 0 and time is not frozen and enemy time is not frozen:\n;             Decrement enemy flash timer\n;             If [enemy flash timer] < 8:\n;                 Unset enemy hurt AI\n;\n;         Active enemy indices index += 2\n;     }\n;\n;     Handle sprite objects\n;     Increment number of times main enemy routine has been executed\n;     $182C..33 = FFFFh\n;     $1834..3B = 0\n; }
+PRG:100FD9:: DB = $A0
+PRG:100FE1:: \n If [first unused enemy index] = 0:
+PRG:100FEC:: \n If [enemy index to shake] != FFFFh:
+PRG:100FFF:Main_enemy_routine_LOOP
+PRG:10100A:: \n If [active enemy index] = FFFFh:
+PRG:101012:: data pointer = $0F78 + [enemy index]
+PRG:10101B:: Enemy AI bank = [enemy bank]
+PRG:101021:: is enemy intangible?
+PRG:101057:BRANCH_INTERACT_END: Enable enemy drawing
+PRG:10107B:: \n X = bit index of lowest set bit of enemy AI handler
+PRG:101081:: \n Enemy AI pointer = [[enemy ID] + 18h + [X] * 2]
+PRG:10108E:BRANCH_DETERMINE_AI_END
+PRG:101096:Main_enemy_routine_MAIN_AI
+PRG:1010A2:: DB = enemy bank
+PRG:1010B7:: is enemy processing instructions?
+PRG:1010BF:: Enemy processing stage = 2
+PRG:1010C6:BRANCH_PROCESS_AI_END
+PRG:1010CC:: is enemy AI enabled?
+PRG:1010E1::; So apparently enemies die when their enemy AI is disabled (due to grapple?)\n; and ([enemy flash timer] = 1 or [enemy frozen timer] = 1)
+PRG:1010EF:BRANCH_KILL_ENEMY_END
+PRG:1010F5:: does enemy use extended spritemap format?
+PRG:1010FE:: 0 = offscreen enemy
+PRG:101108:: is enemy deleted or invisible?
+PRG:101110:: is enemy drawing enabled?
+PRG:101118:BRANCH_DRAW_ENEMY_END
+PRG:101136:: Unset enemy hurt AI
+PRG:101145:BRANCH_RETURN
+PRG:10114C:: \n $182C..33 = FFFFh
+PRG:10115B:: \n $1834..3B = 0
 PRG:101169:Decrement_Samus_hurt_timers_and_clear_active_enemy_indices
 PRG:10118B:Unused@_Logging_routine_for_a_specific_vertical_enemy_reaction
-PRG:10120E:Spawn_enemy_drops
+PRG:10120E:Spawn_enemy_drops: \n; $12 and $14 are X/Y. A contains enemy header pointer (to check drop rates)
 PRG:10122B:Delete_enemy_and_any_connected_enemies
 PRG:10124B:Spawn_enemy_to_enemy_index_@Y@
-PRG:101275:Spawn_enemy
-PRG:1012DB:Spawn_enemy_parts
+PRG:101275:Spawn_enemy:;;     X: New enemy population data\n;; Returns:\n;;     A: 0 if successfully spawned, FFFFh otherwise\n;;     X: New enemy index (or 800h if failed to spawn)\n\n; Looking forward at $92DB `$0E26 = [number of enemy parts] - 1` looks like an off-by-one error for multi-part enemies
+PRG:101291:: number of additional parts
+PRG:1012A5:LOOP_FIRST_ENEMY
+PRG:1012AD:LOOP_OTHER_ENEMIES
+PRG:1012C7:BRANCH_NEXT_ENEMY
+PRG:1012D6:BRANCH_NOT_FOUND
+PRG:1012DB:Spawn_enemy_parts:;; Parameters:\n;;     DB:$0E20: New enemy population data\n;;     $0E26: Number of enemy parts to spawn\n;; Returns:\n;;     A: 0\n;;     X: New enemy index
+PRG:10141A:: \n; Execute enemy AI pointer
 PRG:101423:Add_enemy_to_drawing_queue
-PRG:10144A:Write_enemy_OAM_@if_not_on_frozen_or_invincible_frame@
-PRG:10157E:Normal_enemy_ice_AI
+PRG:10144A:Write_enemy_OAM_@if_not_on_frozen_or_invincible_frame@:; I think $7E:7010/12 are X and Y offsets due to Ceres elevator room rotation
+PRG:10157E:Normal_enemy_frozen_AI
 PRG:1015AD:Unused@_Execute_enemy_AI
-PRG:1015F1:Unused@_Respawn_enemy
-PRG:1016CA:Process_extended_tilemap
-PRG:101726:Handle_queuing_enemy_BG2_tilemap_VRAM_transfer
+PRG:1015E1:Unused_Execute_enemy_AI
+PRG:1015F1:Unused@_Respawn_enemy: \n; See $86:F264 for the used routine
+PRG:1016BA:Execute_enemy_AI_A096BA
+PRG:1016CA:Process_extended_tilemap:;; Parameters:\n;;     [$16]: Pointer to extended tilemap\n\n; Crashes if writing >= 2800h bytes\n\n; Extended tilemap format:\n;     FFFE                      ; Enables extended tilemap\n;     dddd nnnn xxxx xxxx [...] ; First entry\n;     dddd nnnn xxxx xxxx [...] ; Second entry\n;     [...]                     ; Other entries\n;     FFFFh                     ; Terminator\n; where\n;     d: Destination address (in bank $7E)\n;     n: Number of tiles (size of tilemap / 2)\n;     x: Tilemap
+PRG:1016CF:Process_extended_tilemap_LOOP
+PRG:1016FB:Process_extended_tilemap_BRANCH_UNROLLED
+PRG:101721:Process_extended_tilemap_BRANCH_RETURN
+PRG:101726:Handle_queuing_enemy_BG2_tilemap_VRAM_transfer: \n; Used by Crocomire and Mother Brain
 PRG:101758:Enemy_collision_handler
-PRG:101785:Samus_@_projectile_interaction_handler
+PRG:101785:Samus_@_projectile_interaction_handler:; Handles bomb jumps and damage due to reflected projectiles
 PRG:101894:Enemy_projectile_@_Samus_collision_detection
 PRG:101923:Handle_enemy_projectile_collision_with_Samus
 PRG:10196C:Enemy_projectile_@_projectile_collision_detection
-PRG:1019F9:Handle_enemy_projectile_collision_with_projectile
+PRG:1019F9:Handle_enemy_projectile_collision_with_projectile:;; Parameters:\n;;     X: Enemy projectile index\n;;     Y: Projectile index\n\n; Code at $9A3D for creating the dud shot graphics uses the wrong index register for the projectile position,\n; meaning the sprite object usually doesn't appear (used for nuclear waffle and Botwoon)
 PRG:101A5A:Enemy_@_Samus_collision_handler_@_extended_spritemap
 PRG:101B7F:Enemy_@_projectile_collision_handler_@_extended_spritemap
 PRG:101D23:Enemy_@_bomb_collision_handler_@_extended_spritemap
@@ -3855,7 +3897,14 @@ PRG:1023AF:Death_animation
 PRG:102410:Rinka@s_death_animation
 PRG:10245E:Suit_damage_division
 PRG:102477:Normal_enemy_touch_AI
-PRG:102497:Normal_touch_AI@_but_skips_death_animation
+PRG:102497:Normal_touch_AI@_but_skips_death_animation_A0A497
+PRG:1024A1:Normal_touch_AI@_but_skips_death_animation_A0A4A1
+PRG:1024AF:: Speed booster damage
+PRG:1024BA:: Shinespark damage
+PRG:1024C2:: Screw attack damage
+PRG:1024CC:: Pseudo screw damage
+PRG:1024E9:: \nVulnerabilities (bank $B4)
+PRG:10255A:: enemy killed by contact damage
 PRG:1025B7:Normal_enemy_power_bomb_AI@_but_skips_death_animation
 PRG:1025C1:Normal_enemy_power_bomb_AI
 PRG:10263D:Normal_enemy_shot_AI
@@ -6539,7 +6588,9 @@ WORK:1778:Fireflea_Flashing_Timer
 WORK:177A:Fireflea_Flashing_Inxex
 WORK:177E:Fireflea_Flashing_Darkness
 WORK:1784:Enemy_AI_Pointer
+WORK:1786:Enemy_AI_Pointer_Bank
 WORK:1788:Enemy_AI_Pointer_Backup
+WORK:178A:Enemy_AI_Pointer_Bank_Backup
 WORK:178C:Enemy_GFX_Drawn_Hook
 WORK:1794:Enemy_GFX_Drawn_1794
 WORK:1795:Enemy_GFX_Drawn_1795
