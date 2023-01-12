@@ -197,7 +197,7 @@ Enemy_Hitboxes_Remaining = $060D
 Projectiles_Checks_Remaining = $060F
 
 Uploading_to_APU_Flag = $0617
-MusicQueue_List = $0619
+MusicQueue_EntriesList = $0619
 MusicQueue_Timers = $0629
 MusicQueue_NextIndex = $0639
 MusicQueue_StartIndex = $063B
@@ -227,6 +227,8 @@ SoundQueue_Lib1 = $0656
 SoundQueue_Lib2 = $0666
 SoundQueue_Lib3 = $0676
 Sound_Handler_Downtime = $0686
+
+CrocomireRelated_0688_071B = $0688
 
 SamusTop_Transfer_Flag = $071D
 SamusBottom_Transfer_Flag = $071E
@@ -759,6 +761,9 @@ Samus_Grapple_Eject_Left = $0E04
 Samus_Grapple_Eject_Right = $0E06
 Samus_Grapple_Eject_Up = $0E08
 Samus_Grapple_Eject_Down = $0E0A
+
+EndingSequence_0E0C_0E1B = $0E0C
+
 Debug_Disable_Sprite_Interactions = $0E12
 Elevator_Properties = $0E16
 Elevator_Status = $0E18

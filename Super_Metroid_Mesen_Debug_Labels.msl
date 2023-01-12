@@ -5943,7 +5943,7 @@ WORK:060B:Enemy_Spritemaps_Remaining
 WORK:060D:Enemy_Hitboxes_Remaining
 WORK:060F:Projectiles_Checks_Remaining
 WORK:0617:Uploading_to_APU_Flag
-WORK:0619:MusicQueue_List
+WORK:0619:MusicQueue_EntriesList
 WORK:0629:MusicQueue_Timers
 WORK:0639:MusicQueue_NextIndex
 WORK:063B:MusicQueue_StartIndex
@@ -5973,6 +5973,7 @@ WORK:0656:SoundQueue_Lib1
 WORK:0666:SoundQueue_Lib2
 WORK:0676:SoundQueue_Lib3
 WORK:0686:Sound_Handler_Downtime
+WORK:0688:CrocomireRelated_0688_071B
 WORK:071D:SamusTop_Transfer_Flag
 WORK:071E:SamusBottom_Transfer_Flag
 WORK:071F:SamusTop_Definition
@@ -6479,6 +6480,7 @@ WORK:0E04:Samus_Grapple_Eject_Left
 WORK:0E06:Samus_Grapple_Eject_Right
 WORK:0E08:Samus_Grapple_Eject_Up
 WORK:0E0A:Samus_Grapple_Eject_Down
+WORK:0E0C:EndingSequence_0E0C_0E1B
 WORK:0E12:Debug_Disable_Sprite_Interactions
 WORK:0E16:Elevator_Properties
 WORK:0E18:Elevator_Status
