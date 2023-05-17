@@ -1,27 +1,3 @@
-TEMP_00 = $00
-TEMP_02 = $02
-TEMP_04 = $04
-TEMP_06 = $06
-TEMP_08 = $08
-TEMP_0A = $0A
-TEMP_0C = $0C
-TEMP_0E = $0E
-TEMP_10 = $10
-TEMP_12 = $12
-TEMP_14 = $14
-TEMP_16 = $16
-TEMP_18 = $18
-TEMP_1A = $1A
-TEMP_1C = $1C
-TEMP_1E = $1E
-TEMP_20 = $20
-TEMP_22 = $22
-TEMP_24 = $24
-TEMP_16Bit_Mult_A = $26
-TEMP_16Bit_Mult_B = $28
-TEMP_32Bit_Product_A = $2A
-TEMP_32Bit_Product_B = $2C
-TEMP_2E = $2E
 
 DP36_UpdateTiles_80A9DE = $36
 
