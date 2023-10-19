@@ -1,11 +1,13 @@
 
-# Super Metroid Debugging Labels for Mesen-S
+# Super Metroid Debugging Labels for Mesen-S and Mesen2
 
 ## What do I do with it?
 
 Open the Debugger window in Mesen-S and select `Import/Export` > `Import Labels`. Select the `.msl` file to add labels to the debugger view and trace logs.
 
-You can incsrc the `.asm` file to add labels for WRAM addresses to your asar assembly projects. Add `--symbols=wla --symbols-path=Debug_Symbols.sym` as a command line option to generate WLA symbols when assembling. These symbols can also be imported into Mesen-S.
+If using Mesen2, you may need to change the file extension from `.msl` to `.mlb`.
+
+You can incsrc the `.asm` file to add labels for WRAM addresses to your asar assembly projects. Add `--symbols=wla --symbols-path=Debug_Symbols.sym` as a command line option to generate WLA symbols when assembling. These symbols can also be imported into Mesen-S/Mesen2.
 
 
 ## Contributing
