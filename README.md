@@ -14,7 +14,13 @@ You can incsrc the `.asm` file to add labels for WRAM addresses to your asar ass
 
 Feel free to open a pull request to submit improvements, open an issue and discuss naming conventions, or contact me if you're interested in contributing directly.
 
+A copy of the RAM map is included in the repo for the purpose of tracking changes and making updates easier. Original source for this file is linked below
+
 
 ## Thanks
 
-Thanks to P.JBoy for the bank logs and generated labels we started with. Also Metroid Construction :)
+Thanks to P.JBoy for the RAM map, bank logs, and generated labels we started with. Also Metroid Construction :)
+
+https://patrickjohnston.org/bank/index.html
+https://patrickjohnston.org/ASM/Lists/Super%20Metroid/RAM%20map.asm
+https://metroidconstruction.com/
