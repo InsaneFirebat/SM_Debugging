@@ -18,7 +18,7 @@ $00..50: Miscellaneous temporary variables
 }
 $51..86: Regular IO registers (according to $81:8D0F)
 {
-    $51: Forced blank and brightness ($2100). Updated during NMI
+    $51: Forced blank and screen brightness ($2100). Updated during NMI
     {
         v = f000bbbb
         If b = 0:
@@ -334,7 +334,7 @@ $02D0..032F: Mode 7 transfers. 7 or 9 byte entries. 1 byte zero-terminator. No e
     + 1: Source address
     + 4: Size
     + 6: Destination address (1 byte for CGRAM transfers, 2 bytes for VRAM transfers)
-    + 8: VRAM address increment mode (for VRAM transfers only). 0 for tilemap, 80h for tiles
+    + 8: VRAM address increment mode (for VRAM transfers only). 0 for tilemap, 2 for tilemap column, 80h for tiles
 }
 $0330: VRAM write table stack pointer
 $0332: Unused
@@ -408,6 +408,8 @@ $05A2..AB: (Unused) expanding and contracting effect variables. See $88:B17F
     $05A8: HDMA table update destination bottom base position
     $05AA: HDMA table update source bottom base position
 }
+
+$05A6: Adjusted source Y offset during Crocomire melting. [$0694] + y
 
 $05AC: Map min X scroll
 $05AE: Map max X scroll
@@ -491,6 +493,7 @@ $060B:
     Number of remaining enemy spritemap entries in $A0:944A/9A5A/9B7F/9D23
     Loop counter in enemy death item drop routines
     Botwoon's spit enemy projectile angle parameter
+    ; Other stuff. TODO
 }
 $060D:
 {
@@ -521,6 +524,7 @@ $063D: Music entry. Processed when the music timer is decremented to 0
     {
         Song 0: Intro
         Song 1: Main theme
+        Song 2: Unused intro variation
     }
     FF06h: Empty Crateria
     {
@@ -551,7 +555,7 @@ $063D: Music entry. Processed when the music timer is decremented to 0
     FF21h: Mother Brain
     FF24h: Boss fight 1 (and escape music)
     {
-        Song 0: Ridley / Draygon / Bomb Torizo
+        Song 0: Ridley / Draygon / torizos
         Song 1: Pre-fight (Bomb Torizo)
         Song 2: Escape music
     }
@@ -619,18 +623,18 @@ $0656..65: Sound queue, sound library 1
 $0666..75: Sound queue, sound library 2
 $0676..85: Sound queue, sound library 3
 $0686: Sound handler downtime (set to 8 by music queue handler when music changes)
-$0688: Crocomire related
-$068A: Crocomire related
-$068C: Crocomire related
-$068E: Crocomire related
-$0690: Crocomire related
-$0692: Crocomire related
-$0694: Crocomire related
-$0696: Crocomire related
-$0698: Crocomire related
-$069A: Crocomire related
-$069C..071B: Crocomire related
-$071C: Unused. Timer for $80:8577 (wait [A] frames). Accidentally set to 80h byte as part of initialisation of the above table
+$0688: Crocomire skeleton loading index. Target number of pixels to erase per column (30h) during Crocomire melting
+$068A: Crocomire melting tiles loading table (sub)index
+$068C: Number of pixels to erase per column per frame (30h) during Crocomire melting
+$068E: Number of words to load (200h) when loading Crocomire melting tiles. Used immediately to initialise a loop counter, no reason for this value to be stored to RAM
+$0690: Crocomire melting X offset table index. Index for $A4:9697
+$0692: Crocomire melting displacement coefficient. Displacement = y * [$0692] / 10000h. Initialised to 100h. Incremented by 180h up to 5000h, finishing the melting
+$0694: Initial adjusted destination Y offset during melting. Initialised to 58h. Decremented by 3 until 10h
+$0696: Set to 30h when loading Crocomire melting tiles. Never read
+$0698: Max adjusted destination Y offset (58h) during Crocomire melting. HDMA data table is processed until [$0694] + y - displacement(y) >= [$0698]
+$069A: Crocomire melting tiles loading table (base) index
+$069C..071D: Crocomire melting Y offsets. Only $069C..CC used. Indexed by [$9697 + [$0690]] (melting X offset). Pretty useless, could be replaced by a simple loop counter in $96C8
+$071C: Unused. Timer for $80:8577 (wait [A] frames)
 $071D: Flag. Transfer Samus' top half tiles to VRAM
 $071E: Flag. Transfer Samus' bottom half tiles to VRAM
 $071F: Samus' top half tiles definition. Pointer to DMA data (bank 92) for Samus' top sprites (3 byte address, 2 byte part 1 size, 2 byte part 2 size)
@@ -840,7 +844,7 @@ $077C..0997: Main gameplay RAM (according to $82:8593)
     $0783: Mode 7 flag
     $0785: Unused. Mode 7 rotation angle in $80:B032/B0C2 (in units of 2pi/100h radians)
     $0787: Set to 0 when loading file select map foreground tilemap. Never read
-    $0789: Flag. Current area's map has been collected, display boss and blue rooms. (Blue rooms will not be marked on pause map until Samus leaves the area)
+    $0789: Current area map collected flag. Effectively a mirror of the $7E:D908 byte for the current area, some code checks this variable, some code checks the other one.
     $078B: Load station index
     $078D: Door pointer
     $078F: Door BTS
@@ -912,17 +916,19 @@ $077C..0997: Main gameplay RAM (according to $82:8593)
     {
         $07E1:
         {
+            Diagonal quake timer for escape room 2/4
             Elevatube subposition
-            Ceres escape elevator shaft rotation matrix index
-            Ceres pre-elevator hall debris timer
+            Rotation matrix index for Ceres escape elevator shaft
+            Debris delay timer for Ceres pre-elevator hall
         }
         $07E3:
         {
+            Earthquake type for escape room 2/4
             Elevatube position
-            Ceres escape elevator shaft rotation matrix timer
+            Rotation matrix timer for Ceres escape elevator shaft
         }
         $07E5: Elevatube velocity. Unit 1/100h px/frame
-        $07E7: Elevatube acceleration. Unit 1/100h px/frameÂ²
+        $07E7: Elevatube acceleration. Unit 1/100h px/frame²
     }
     $07E9: Scrolling finished hook. Bank $90. Set to $9589 during the Spore Spawn fight to keep the camera from moving up
     $07EB..EC: HDMA data table during Ceres elevator and Ceres Ridley mode 7 sections
@@ -980,7 +986,7 @@ $077C..0997: Main gameplay RAM (according to $82:8593)
     }
     $0939:
     {
-        Proposed scrolled layer 1 X position in $80:A528/A641/A6BB. [layer 1 X position] Â± (X distance Samus moved + 1/3)
+        Proposed scrolled layer 1 X position in $80:A528/A641/A6BB. [layer 1 X position] ± (X distance Samus moved + 1/3)
         Loop counter in $80:A9DE
     }
     $093B: Block to update (in $7F) in $80:A9DE/$80:AB75
@@ -996,8 +1002,8 @@ $077C..0997: Main gameplay RAM (according to $82:8593)
     {
         0: Normal (camera is 60h pixels behind Samus)
         2: Kraid/Crocomire (camera is 40h/50h pixels to the left of Samus when she's facing right/left)
-        4: Camera is 20h pixels to the left of Samus. There's Crocomire code that sets this, but I think it's unused
-        6: Camera is E0h pixels to the left of Samus
+        4: Camera is 20h pixels to the left of Samus. Unused
+        6: Camera is E0h pixels to the left of Samus. Set by Crocomire
     }
     $0943: Timer status. Upper byte is set to 80h sometimes, but never read
     {
@@ -1133,7 +1139,7 @@ $099C: Door transition function
 }
 $099E: Menu option index (in options menu and submenus)
 $09A0: Unused
-$09A2..0A01: Save to SRAM
+$09A2..0A01: Samus data and game options. Saved to SRAM
 {
     $09A2: Equipped items
     $09A4: Collected items
@@ -1181,7 +1187,7 @@ $09A2..0A01: Save to SRAM
     $09B4: Jump binding
     $09B6: Run binding
     $09B8: Item cancel binding
-    $09BA: Item switch binding
+    $09BA: Item select binding
     $09BC: Aim down binding
     $09BE: Aim up binding
     $09C0: Reserve health mode
@@ -1209,7 +1215,7 @@ $09A2..0A01: Save to SRAM
     }
     $09D4: Samus max reserve health
     $09D6: Samus reserve health
-    $09D8: Samus reserve missiles. Only used by missile pickup routine(91DF80)
+    $09D8: Samus reserve missiles. Only used by missile pickup routine ($91:DF80)
     $09DA: Game time, frames
     $09DC: Game time, seconds
     $09DE: Game time, minutes
@@ -1230,8 +1236,8 @@ $0A02..0E0B: Samus RAM (according to $91:E018)
     $0A0A: Samus' previous supers missiles. Used for check to update super count
     $0A0C: Samus' previous power bombs.     Used for check to update power bomb count
     $0A0E: Previous HUD item index.         Used for check to update HUD item highlight
-    $0A10: Samus' previous pose X direction
-    $0A11: Samus' previous movement type
+    $0A10: Samus' previous pose X direction. Never read. See $0A22
+    $0A11: Samus' previous movement type. Used only for an x-ray and sound effect check. See $0A23. TODO: research and rename
     $0A12: Samus' previous health. Used to check to make hurt sound and flash.
     $0A14: Backup of controller 1 input ($8B) during demo (actual hardware buttons, not game generated demo input)
     $0A16: Backup of newly pressed controller 1 input ($8F) during demo (actual hardware buttons, not game generated demo input)
@@ -1626,7 +1632,7 @@ $0A02..0E0B: Samus RAM (according to $91:E018)
     $0A58: Samus movement handler. Bank $90. Called by $0A44 handlers: $E725/$E7F5/$E833/$E8EC
     {
         $946E: Released from grapple swing
-        $94CB: Samus drained - crouching
+        $94CB: Samus drained - falling
         $A337: Normal
         $D068: Shinespark windup
         $D0AB: Vertical shinespark
@@ -1698,7 +1704,7 @@ $0A02..0E0B: Samus RAM (according to $91:E018)
     $0A66: Samus X speed divisor. Halves Samus X speed this many times, up to 4 times. Also slows down animations linearly, no limit. Incremented/decremented by Draygon gunk. Set to 2 by Shitroid
     $0A68: Special Samus palette timer. Used for speed booster shine, shinesparking, crystal flash bubble, but not speed boosting or x-ray
     $0A6A: Samus health warning is on
-    $0A6C: Samus X speed table pointer. Pointer to table of Ch byte entries, indexed by Samus movement type
+    $0A6C: Samus X speed table pointer. Used for base speed ($0B46). Pointer to table of Ch byte entries, indexed by Samus movement type
     {
         AAAA aaaa MMMM mmmm DDDD dddd
         
@@ -1770,15 +1776,14 @@ $0A02..0E0B: Samus RAM (according to $91:E018)
     $0A88..92: Suit pickup indirect HDMA table. E4h,$9800, E4h,$98C8, 98h,$9990, 00h,00h
     
     $0A94: Samus animation frame timer
-    $0A96: Samus animation frame
+    $0A96: Samus animation frame. Indexes animation delay data ([$91:B010 + [Samus pose] * 2]), Samus spritemap table ($92:808D + [$92:9263/945D + [Samus pose] * 2]), tiles animation definitions ([$92:D94E + [Samus pose] * 2]), arm cannon drawing data ([$90:C7DF + [Samus pose] * 2] + 2/4)
     $0A98: Unused
-    $0A9A: Samus animation frame skip. If positive: gives the Samus Animation frame to use when Samus pose changes. If negative: don't change animation frame when Samus pose changes
-    $0A9C: Samus animation frame buffer (added to 09A4 to get total Animation delay). Used when Samus is in liquid. 0002 = Lava/Acid, 0003 = Water. Negated by Gravity Suit
+    $0A9A: New pose Samus animation frame. If positive: Samus animation frame to use when Samus pose changes. If negative: Samus animation frame is preserved when Samus pose changes
+    $0A9C: Samus animation frame buffer (added to $09A4 to get total animation delay). Used when Samus is in liquid (without gravity suit). 2 in lava/acid, 3 in water
     $0A9E: Grapple walljump timer. 1Eh frames
     $0AA0: Reached Ceres elevator fade timer. 60 frames
     $0AA2: Shinespark windup/crash timer. Crystal flash raise Samus timer
-    $0AA4: STZ'd during poses #$39, #$3A, #$3F, #$40. Unused poses. Never read
-
+    $0AA4: Unused. Cleared by $90:A672 (enable horizontal slope detection), called only by unused transition poses 39h/3Ah/3Fh/40h. Never read
     $0AA6: Flag. Arm cannon is open / opening (else arm cannon is closed / closing)
     $0AA7: Flag. Arm cannon is opening/closing
     $0AA8: Arm cannon frame (0 = closed/none, 3 = fully open)
@@ -1914,7 +1919,7 @@ $0A02..0E0B: Samus RAM (according to $91:E018)
     $0B2E: Samus Y speed. Samus Y velocity for jump in ending sequence ($8B:F651). Allowed to become -1 via deceleration, which must be handled specially (e.g. bomb jump movement in $90:8F1B)
     $0B30: Unused
     $0B32: Samus Y subacceleration / shinespark Y subacceleration delta / shinespark X subacceleration
-    $0B34: Samus Y acceleration / shinespark Y acceleration delta / shinespark X acceleration
+    $0B34: Samus Y acceleration (i.e. gravity) / shinespark Y acceleration delta / shinespark X acceleration
     $0B36: Samus Y direction
     {
         0: None
@@ -1953,9 +1958,9 @@ $0A02..0E0B: Samus RAM (according to $91:E018)
     $0BB4..C7: Projectile X radii
     $0BC8..DB: Projectile Y radii
     $0BDC..E5: Projectile X velocities (unit 1/100h px/frame). Distance from Samus for speed echoes / spazer/plasma SBA / end of ice SBA
-    $0BE6..EF: Bomb X speeds
+    $0BE6..EF: Bomb X velocities (unit 1/100h px/frame). Uses sign-magnitude(!), i.e. MSb is used for direction, set = left, clear = right
     $0BF0..F9: Projectile Y velocities (unit 1/100h px/frame). SBA timer for wave/ice SBA. Angle delta for spazer SBA. Phase for plasma SBA
-    $0BFA..0C03: Bomb Y speeds
+    $0BFA..0C03: Bomb Y velocities (unit px/frame). Standard twos complement unlike X velocity(!)
     $0C04..0D: Projectile directions
     {
         0: Up, facing right
@@ -2041,16 +2046,14 @@ $0A02..0E0B: Samus RAM (according to $91:E018)
     }
     $0C86..8F: Bomb timers. Set to FFFFh by power bomb when explosion is spawned
     $0C90..99: Projectile trail timers
-    $0C9A..A3: Bomb Y subspeeds
-    $0CA4..B7: Projectile variables. Used by spazer SBA and bomb spread
+    $0C9A..A3: Bomb Y subvelocities
+    $0CA4..AD: Projectile phases. Used by spazer SBA
     {
-        Spazer SBA: Projectile phase
-        {
-            0: Circling
-            2: Flying up towards point
-            4: Flying up away from point
-        }
+        0: Circling
+        2: Flying up towards point
+        4: Flying up away from point
     }
+    $0CAE..B7: Bomb bounce Y velocities
     $0CB8..CB: Projectile spritemap pointers
     $0CCC: Cooldown timer
     $0CCE: Projectile counter
@@ -2107,11 +2110,11 @@ $0A02..0E0B: Samus RAM (according to $91:E018)
     $0D23: Grapple beam extension X velocity
     $0D24: Grapple beam extension Y subvelocity
     $0D25: Grapple beam extension Y velocity
-    $0D26: Grapple swing angular velocity. Unit pi/8000h radians. Positive = clockwise, negative = anticlockwise. Capped at Â±480h
+    $0D26: Grapple swing angular velocity. Unit pi/8000h radians. Positive = clockwise, negative = anticlockwise. Capped at ±480h
     $0D28: Grapple swing angular acceleration due to angle of swing (up-right = 6, down-right = 24, up-left = -6, down-left = -24, halved if liquid physics)
     $0D2A: Grapple swing angular acceleration due to button input (left = Ch, right = -Ch, halved if liquid physics)
     $0D2C: Grapple swing angular deceleration (due to angle of swing), applied to speed only when Samus is rising (up-right = 1, down-right = 5, up-left = -1, down-left = -5)
-    $0D2E: Extra grapple swing angular velocity. Does not participate in the 480h speed cap. Unit pi/8000h radians. Positive = clockwise, negative = anticlockwise. Starts at Â±300h
+    $0D2E: Extra grapple swing angular velocity. Does not participate in the 480h speed cap. Unit pi/8000h radians. Positive = clockwise, negative = anticlockwise. Starts at ±300h
     $0D30: Grapple kick cooldown timer. Set to 10h when bouncing off a wall/ceiling
     $0D32: Grapple beam function
     {
@@ -2232,7 +2235,7 @@ $0A02..0E0B: Samus RAM (according to $91:E018)
     $0DB2: Distance Samus moved up (negative).      Used for projectile initial speed. Zero if moved down
     $0DB4: Subdistance Samus moved up (negative).   Used for projectile initial speed. Zero if moved down
     $0DB6: Distance Samus moved down.               Used for projectile initial speed. Zero if moved up
-    $0DB8: Subdistance Samus moved down.            Used for projectile initial speed. Zero if moved up
+    $0DB8: Subdistance Samus moved down. Never read (see $90:B1F3). Zero if moved up
     $0DBA: Flag. Samus position was adjusted by a slope. If set, Samus does *not* add $0DBC to the distance moved down when grounded (see $90:923F)
     $0DBC: Total Samus X speed. (base speed + run speed) / 2^(speed divisor), doesn't include distance moved due to $0B58
     $0DBE: Total Samus X subspeed
@@ -2452,7 +2455,8 @@ $0E20..41: Enemy temporaries
         Demo recorder frame counter
         Enemy header pointer in $86:EF29
         Angle from enemy to Samus reflected to down-right quadrant in $A0:ACA8
-        X speed in $A0:B691 / $A3:89F3/C716
+        X speed in $A0:B691
+        X velocity in $A3:89F3/C716
         Swoop Y position in $A5:8817
         Possibly erroneous X velocity in $A5:9FE0
         Enemy debugger hex value in $B4:9F7E
@@ -2460,7 +2464,7 @@ $0E20..41: Enemy temporaries
     $0E26: 
     {
         Number of enemy parts to spawn in $A0:92DB
-        xÂ²/r in $A0:ACA8
+        x²/r in $A0:ACA8
         X subspeed in $A0:B691
         Swoop Y position index in $A5:8817
         Enemy set entry pointer in $B4:94D5/9758
@@ -2497,7 +2501,7 @@ $0E20..41: Enemy temporaries
         Enemy X position in $A0:ACA8
         Operand in $A0:AFEA/B07D
         Absolute value in $A0:B067
-        Magnitude in $A0:B0DA
+        Magnitude in $A0:B0DA / $A8:89D4
         Some index in $A3:DC1C
         Target Y position in $A3:EB98/EDEB/EECE/EF07
         Something in $A8:A742
@@ -2660,7 +2664,9 @@ $178C: Enemy graphics drawn hook (3 bytes). Executed after drawing Samus, projec
     Set to $A9:D39A by dead torizo
 }
 $1790: 3 byte pointer. Set to RTL when loading enemies, otherwise unused
-$1794..99: General purpose variables for enemy graphics drawn hook?
+$1794: Enemy palette cycle enemy palette index. Multiple of 20h. Reflec and blue Brinstar face block use base address $7E:C100, magdollite uses $7E:C000...
+$1796: Enemy palette cycle colour set index
+$1798: Enemy palette cycle timer
 $179A: Enemy BG2 tilemap size
 $179C: Boss ID. Used by $90:A7E2 for table that determines how to mark boss room as explored. Used in $91:D143 to check if x-ray should be disabled.
 {
@@ -2715,7 +2721,7 @@ $183E: Earthquake type. Range 0..23h. 14h (BG1, BG2 and enemies, 1 pixel displac
         ; print(f'Earthquake type = {["BG1 only", "BG1 and BG2", "BG1, BG2 and enemies", "BG2 only and enemies"][t // 9]}, {t // 3 % 3 + 1} pixel displacement, {["horizontal", "vertical", "diagonal"][t % 3]}')
 }
 $1840: Earthquake timer
-$1842: Frame counter (*every* frame). Incremented in $A0:8687 (handle room shaking)
+$1842: Number of times $A0:8687 (handle room shaking) has been executed. Never read
 $1844: Sprite object index
 $1846: Debug enemy index (for enemy debugger)
 $1848: Log index for unused enemy function $A0:918B
@@ -2827,18 +2833,18 @@ $1866: Debug enemy population pointer / debug previous controller 2 input for Cr
 $1868: Debug enemy spawn X position
 $186A: Debug enemy spawn Y position
 $186C: Unused
-$186E: Enemy spritemap entry pointer when detecting collisions between enemies and projectiles or Samus
-$1870: Enemy left boundary for enemy/projectile collisions
-$1872: Enemy bottom boundary for enemy/projectile collisions
-$1874: Enemy right boundary for enemy/projectile collisions
-$1876: Enemy top boundary for enemy/projectile collisions
-$1878: Enemy; pointer at (graphic pointer + 8) + 2
-$187A: Enemy spritemap entry X position during enemy collision detection with projectiles or Samus. Also used as a mirror of projectile damage if they do collide, then later total damage.
-$187C: Enemy spritemap entry Y position during enemy collision detection with projectiles or Samus.
-$187E: Samus right boundary when enemy is checking for collisions with Samus
-$1880: Samus left boundary when enemy is checking for collisions with Samus
-$1882: Samus bottom boundary when enemy is checking for collisions with Samus
-$1884: Samus top boundary when enemy is checking for collisions with Samus
+$186E: Enemy spritemap entry pointer during enemy collision handling with Samus/projectiles
+$1870: Enemy left boundary for enemy / projectile collisions
+$1872: Enemy bottom boundary for enemy / projectile collisions. Direction of Samus from enemy in a bang subroutine ($A3:BBEB)
+$1874: Enemy right boundary for enemy / projectile collisions
+$1876: Enemy top boundary for enemy / projectile collisions
+$1878: Enemy hitbox entry pointer during enemy collision handling with Samus/projectiles
+$187A: Enemy spritemap entry X position during enemy collision handling with Samus/projectiles. Power bomb damage in normal enemy power bomb AI. Projectile damage in normal enemy shot AI
+$187C: Enemy spritemap entry Y position during enemy collision handling with Samus/projectiles.
+$187E: Samus right boundary for enemy / Samus collisions
+$1880: Samus left boundary for enemy / Samus collisions
+$1882: Samus bottom boundary for enemy / Samus collisions
+$1884: Samus top boundary for enemy / Samus collisions
 $1886..99: Unused
 $189A: Samus' target X position in $A0:A8F0 (Samus / solid enemy collision detection). [Samus X position] adjusted by [$12].[$14] (+ 1 if new X subposition is 0(!))
 $189C: Samus' target X subposition in $A0:A8F0 (Samus / solid enemy collision detection)
@@ -2846,7 +2852,14 @@ $189E: Samus' target Y position in $A0:A8F0 (Samus / solid enemy collision detec
 $18A0: Samus' target Y subposition in $A0:A8F0 (Samus / solid enemy collision detection)
 $18A2: Mirror of Samus' X radius ($0AFE) during Samus / solid enemy collision detection
 $18A4: Mirror of Samus' Y radius ($0B00) during Samus / solid enemy collision detection
-$18A6: Various use collision detection index (Samus/Enemy is an enemy index, Enemy/Projectile is a projectile index)
+$18A6: Collision index. Used notably for collided projectile index in enemy shot reaction, and otherwise for loop variables
+{
+    Projectile index / 2 in projectile / enemy collision handling (including Kraid's mouth's custom collision detection)
+    Projectile index / 2 in projectile / Samus interaction
+    Enemy projectile index in enemy projectile / Samus collision handling
+    Enemy projectile index in enemy projectile / projectile collision handling
+    Enemy index in solid enemy / Samus collision detection
+}
 $18A8: Samus invincibility timer
 $18AA: Samus knockback timer
 $18AC: Projectile invincibility timer (prevents bomb jump and damage from reflected projectiles). Set to 10 by shooting beam, 20 by shooting missile. AranJaeger proposes this might be to make the Draygon fight less frustrating.
@@ -3103,7 +3116,7 @@ $198D..1C1E: Enemy projectile data. 12h enemy projectiles max
     $1BD7..FA: Enemy projectile properties
     {
         v & FFFh: Damage
-        8000h: Detect collisions with projectiles
+        8000h: Enable collisions with projectiles
         4000h: Don't die on contact
         2000h: Disable collisions with Samus
         1000h: High priority (drawn over enemies/Samus/projectiles)
@@ -3115,16 +3128,16 @@ $198D..1C1E: Enemy projectile data. 12h enemy projectiles max
 }
 $198D..1C1E: Non-gameplay use
 {
-    $198D: Mode 7 transformation angle. Units of pi/80h radians
+    $198D: Mode 7 transformation angle. Unit pi/80h radians
     $198F: Mode 7 transformation zoom level. Scale factor = 100h / [$198F]
-    $1991: Mode 7 X subposition
-    $1993: Mode 7 X position
-    $1995: Mode 7 Y subposition
-    $1997: Mode 7 Y position
-    $1999: Mode 7 X subspeed
-    $199B: Mode 7 X speed
-    $199D: Mode 7 Y subspeed
-    $199F: Mode 7 Y speed
+    $1991: Cinematic BG1 X subposition
+    $1993: Cinematic BG1 X position
+    $1995: Cinematic BG1 Y subposition
+    $1997: Cinematic BG1 Y position
+    $1999: Cinematic BG1 X subspeed
+    $199B: Cinematic BG1 X speed
+    $199D: Cinematic BG1 Y subspeed
+    $199F: Cinematic BG1 Y speed
     
     ; Mode 7 object definitions are at:
     ;     $8B:A355: Baby metroid in title sequence
@@ -3141,7 +3154,7 @@ $198D..1C1E: Non-gameplay use
     ;     $8B:CF3F..CF74: Intro
     ;     $8B:F748..EF53: Ending
     
-    $19B5..BC: Cinematic BG object indirect instruction pointer (bank $8C)
+    $19B5..BC: Cinematic BG object indirect instruction pointers (bank $8C)
     $19BD: Cinematic BG object index
     $19CD..D4: Cinematic BG object instruction list pointers
     $19D5..DC: Cinematic BG object pre-instructions
@@ -3166,24 +3179,53 @@ $198D..1C1E: Non-gameplay use
     ; Ending
     {
         $19F7: Credits object instruction list pointer
-        
+        $19F9: Credits object instruction timer
+        $19FB: Credits object timer
         $19FD: Credits object pre-instruction
         $19FF: Credits object enable flag. Negative = enabled
-        
+        $1A01: Cinematic BG tilemap row index
+        $1A03: Last credits update Y position
         $1A05: Shooting stars enable flag
     }
     
     $1A49: Cinematic function timer
-    $1A4B: Intro cross-fade timer?
-
+    $1A4B:
+    {
+        Intro cross-fade timer (used only for transition out of cutscene)
+        Ceres explosion 2 offset index
+        Zebes explosion afterglow timer
+        Ending gunship X velocity
+        Post-credits Samus beam VRAM transfer index
+    }
+    $1A4D:
+    {
+        Intro baby metroid X velocity (unit 1/100h px/frame)
+        Intro baby metroid idle timer
+        Ending gunship shake index
+        Ending gunship X subvelocity
+        Post-credits stars fade timer
+        Post-credits Super Metroid icon VRAM transfer index
+    }
+    $1A4F:
+    {
+        Intro baby metroid Y velocity (unit 1/100h px/frame)
+        Post-credits Samus fade timer
+    }
     $1A51: Cinematic frame counter
+    $1A53: Skip to title screen index
+    {
+        0: Inactive
+        1: Fade out
+        2: Prepare title screen
+        3: Fade in
+    }
 
     ; Cinematic sprite object definitions are at:
     ;     $8B:A0EF..A12A: Title sequence
     ;     $8B:CE55..CF3E: Intro, Ceres, Zebes
     ;     $8B:EE9D..EF98: Ending
     
-    $1A57: Intro Samus display flag. If non-zero, draw Samus, projectiles during intro. If negative, enemies (cinematic sprite objects) are drawn last (meaning under Samus)
+    $1A57: Intro Samus display flag
     {
         0: Samus/projectiles not displayed
         1: Samus/projectiles displayed under cinematic sprite objects
@@ -3195,25 +3237,29 @@ $198D..1C1E: Non-gameplay use
     $1A7D..9C: Cinematic sprite object X positions
     $1A9D..BC: Cinematic sprite object Y positions
     $1ABD..DC: Cinematic sprite object palette indices
-    $1ADD..FC: Cinematic sprite object variables
+    $1ADD..FC: Cinematic sprite object X subposition
     {
-        Critters escape X subposition
-        Zebes explosion stars X subposition
-        Yellow clouds X subposition
+        Intro Mother Brain flash timer
     }
-    $1AFD..1B1C: Cinematic sprite object variables
+    $1AFD..1B1C: Cinematic sprite object Y subposition
     {
-        Critters escape Y subposition
         Zebes explosion stars X subvelocity
-        Yellow clouds Y subposition
     }
     $1B1D..3C: Cinematic sprite object instruction list pointers
     $1B3D..5C: Cinematic sprite object pre-instructions
     $1B5D..7C: Cinematic sprite object instruction timers
     $1B7D..9C: Cinematic sprite object timers (according to instructions $94C3, $94CD, $94D6)
     {
-        Super Metroid icon speed
+        Super Metroid icon speed. Unit px/frame
         Zebes explosion stars X velocity
+        Low: Metroid egg particle index. High: Metroid egg particle counter
+        Low: Metroid egg slime drops index. High: Metroid egg slime drops counter
+        Intro Mother Brain hit counter / shake timer
+        Intro rinka index
+        Confused baby metroid sound effect timer
+        Ceres stars velocity. Unit 1/100h px/frame
+        Zebes Y velocity. Unit 1/100h px/frame
+        Zebes stars Y velocity. Unit 1/100h px/frame
     }
     $1B9D: Cinematic sprite object initialisation parameter
 
@@ -3390,12 +3436,13 @@ $1F53: Demo timer. 15 second delay before transitioning to demos from title scre
 $1F55: Demo set
 $1F57: Demo scene
 $1F59: Number of demo sets (4 if beaten game, otherwise 3)
-$1F5B..FF: Stack (Lowest observed ATM is 1FC5, 1FB5 by Jathys. No known used RAM above 1F5B)
+$1F5B..FF: Stack. Lowest observed is $1FC5 by Kejardon, 1FB5 by Jathys
 
 $7E:2000..9FFF: Room tiles. Decompressed here temporarily then transferred to VRAM $0000..3FFF
 {
     $7E:7000..9FFF: CRE tiles, or extended part of room tiles if [CRE bitset] & 4 != 0
 }
+$7E:2000..5FFF: Grey clouds during Zebes explosion tilemap
 $7E:2000..2FFF: Enemy BG2 tilemap. Transfer is flagged via $0E1E, also see extended tilemap format in "Enemy RAM.asm". Used by Kraid, Phantoon, Draygon, Mother Brain, Crocomire
 {
     Kraid:
@@ -3463,11 +3510,13 @@ $7E:3000..37FF: Cinematic BG tilemap
 {
     Intro text:
     {
-        $7E:3000..FF: Top margin
+        $7E:3000..FF: Top margin / initial Japanese text
         $7E:3100..35FF: English text region
         $7E:3600..FF: Japanese text region
         $7E:3700..FF: Bottom margin
     }
+    
+    
 }
 $7E:3000..31DF: Message box BG3 Y scroll HDMA data table
 {
@@ -3510,6 +3559,7 @@ $7E:4000..6FFF: X-ray tilemaps
     $7E:6000..6FFF: Backup of BG1 tilemap during x-ray
 }
 $7E:4000..4FFF: BG2 tilemap. Set to blank (0338h) or decompressed here temporarily, then transferred to VRAM $4800..4FFF
+$7E:4000..4FFF: Crocomire melting BG2 tiles
 $7E:4000..4EFF: FX tilemap when clearing FX tilemap
 $7E:4000..47FF: Decompression buffer for Kraid's top half BG2 tilemap
 $7E:4000..47FF: BG2 room select map tilemap
@@ -3518,6 +3568,13 @@ $7E:4000..45FF: Intro Japanese text tiles (BG3)
 $7E:4100..47FF: Backup of VRAM $5880..5BFF during message boxes
 
 $7E:5000..53FF: Copy of VRAM $3E00..3FFF during pause screen in Kraid's room
+
+$7E:6000..9FFF: Big Zebes during Zebes explosion tilemap
+$7E:6000..87FF: Post-credits Super Metroid icon
+{
+    $7E:6000..7FFF: Tiles
+    $7E:8000..87FF: Tilemap
+}
 
 $7E:7000..97FF: Enemy tile data. Transferred to VRAM $6C00..7FFF by $A0:8CD7 when loading game, then cleared by enemy initialisation
 $7E:7000..77FF: Enemy spawn data. 40h byte slots
@@ -3611,7 +3668,12 @@ $7E:7800..7FFF: Extra enemy RAM (40h bytes each)
         $7E:7818: Draygon tail whip timer
         $7E:781A: Draygon goop Y oscillation angle
         $7E:781C: Draygon health-based palette table index
-        $7E:781E: Draygon swoop Y acceleration. Unit 1/100h px/frameÂ². Initialised to 18h. Increased by 8 in enemy shot up to 98h (even for dud shots)
+        $7E:781E: Draygon swoop Y acceleration. Unit 1/100h px/frame². Initialised to 18h. Increased by 8 in enemy shot up to 98h (even for dud shots)
+    }
+    
+    Crocomire:
+    {
+        $7E:783E: Melting HDMA object index
     }
     
     Mother Brain:
@@ -3768,6 +3830,11 @@ $7E:8000..87FF: Extra enemy RAM (40h bytes each)
         $7E:8016: Draygon death drift Y subspeed. Calculate on fatal damage, but never read
     }
 
+    Crocomire:
+    {
+        $7E:8000: Acid damage sound effect timer
+    }
+
     Ridley:
     {
         $7E:800A: Ridley's final attack swoop counter?
@@ -3915,6 +3982,18 @@ $7E:8800..8FFF: Extra enemy RAM (40h bytes each). Includes variables for corpse 
 
 $7E:9000..953F: Mother Brain corpse rotting graphics
 $7E:9000..93FF: Botwoon position history. Previous 100h X/Y positions. Circular buffer with stack index $0FAA
+$7E:9000..19: Crocomire death sequence variables
+{
+    $7E:9000: Pre-bridge block dust cloud spawned flag
+    $7E:9002: Bridge part 1 crumbled flag
+
+    $7E:9006: Bridge part 2 crumbled flag
+
+    $7E:900A: Set to 0, never read
+
+    $7E:9016: Death sequence crumbling bridge index
+    $7E:9018: Acid damage smoke timer
+}
 $7E:9000..19: Wavy Phantoon BG2 X scroll indirect HDMA table
 {
     If Phantoon wavelength doubled:
@@ -4023,13 +4102,15 @@ $7E:9F80..DB: Scrolling sky BG2 X scroll HDMA data table. Two word entries
     + 2: Scroll (pointed to by indirect HDMA table)
 }
 
-$7E:A000..BFFF: Tile table ($A000..A7FF is CRE if not in Ceres). 8 byte entries. Indexed by the tile index of level data / custom background. Tilemap values for four 8x8 tiles
+$7E:A000..BFFF: Tile table ($A000..A7FF is CRE if not in Ceres, $A470..AF is used for item PLMs). 8 byte entries. Indexed by the tile index of level data / custom background. Tilemap values for four 8x8 tiles
 {
     + 0: Top left
     + 2: Top right
     + 4: Bottom left
     + 6: Bottom right
 }
+$7E:A000..AFFF: Ending font 3 tiles
+
 $7E:C000..C1FF: Palettes, copied straight to CGRAM. First colour ($7E:C000) is main screen backdrop colour
 {
 	$7E:C000..1F: BG1/2 palette 0 (4bpp) - SCE/CRE / BG3 palettes 0..3 (2bpp)
@@ -4119,7 +4200,7 @@ $7E:C200..C3FF: Target palettes
 	$7E:C220..3F: BG palette 1 - SCE/CRE
 	$7E:C240..5F: BG palette 2 - SCE/CRE
 	$7E:C260..7F: BG palette 3 - SCE/CRE
-	$7E:C280..AF: BG palette 4 - SCE
+	$7E:C280..9F: BG palette 4 - SCE
 	$7E:C2A0..BF: BG palette 5 - SCE
 	$7E:C2C0..DF: BG palette 6 - SCE
 	$7E:C2E0..FF: BG palette 7 - SCE
@@ -4127,7 +4208,7 @@ $7E:C200..C3FF: Target palettes
 	$7E:C320..3F: Sprite palette 1 - enemies
 	$7E:C340..5F: Sprite palette 2 - enemies
 	$7E:C360..7F: Sprite palette 3 - enemies
-	$7E:C380..AF: Sprite palette 4 - Samus. Set to palette data from bank $9B during room transitions by $91:DDD7
+	$7E:C380..9F: Sprite palette 4 - Samus. Set to palette data from bank $9B during room transitions by $91:DDD7
 	$7E:C3A0..BF: Sprite palette 5 - most common sprites (item drops, smoke, explosions, bombs, power bombs, missiles, gates (wall part), water splashes, grapple beam)
 	$7E:C3C0..DF: Sprite palette 6 - beams
 	$7E:C3E0..FF: Sprite palette 7 - enemies
@@ -4257,16 +4338,16 @@ $7E:D658..D7BF: Projectile trail data
 $7E:D7C0..DE1B: RAM that is saved to SRAM
 {
     $7E:D7C0..D81F: Copy of $09A2..0A01 when saving
-    $7E:D820..27: Event bit array. $23..27 are unused
+    $7E:D820..27: Event bit array. Bytes 3..7 are unused
     {
         $7E:D820:
         {
             1:   Event 0 - Zebes is awake
             2:   Event 1 - Shitroid ate sidehopper
             4:   Event 2 - Mother Brain's glass is broken
-            8:   Event 3 - zebetite 1 is destroyed
-            10h: Event 4 - zebetite 2 is destroyed
-            20h: Event 5 - zebetite 3 is destroyed
+            8:   Event 3 - zebetite destroyed bit 0 (true if 1 or 3 zebetites are destroyed)
+            10h: Event 4 - zebetite destroyed bit 1 (true if 2 or 3 zebetites are destroyed)
+            20h: Event 5 - zebetite destroyed bit 2 (true if all 4 zebetites are destroyed)
             40h: Event 6 - Phantoon statue is grey
             80h: Event 7 - Ridley statue is grey
         }
@@ -4299,14 +4380,14 @@ $7E:D7C0..DE1B: RAM that is saved to SRAM
         4: Area torizo (Bomb Torizo, Golden Torizo)
     }
     $7E:D830..6F: Unused. Chozo block destroyed bit array. Used by unused chozo block PLMs $D700/D708. Cleared on new save file, FFh filled by demo playback
-    $7E:D870..AF: Item collected bit array. $84..AF are unused. See "Item PLMs.asm"
+    $7E:D870..AF: Item collected bit array. Bytes 14h..3Fh are unused. See "Item PLMs.asm"
     {
         $00      $01      $02      $03      $04      $05      $06      $07      $08      $09      $0A       $10      $11      $12      $13
         01234567 01234567 01234567 01234567 01234567 01234567 01234567 01234567 01234567 01234567 01234567  01234567 01234567 01234567 01234567
         CCCCCCCC CCCCCBBB BBBB BBB BBBBBBBB  BBBBBBB BBBBB    BNNNNNNN NNNNNNNN NNNNN NN  NNNNNNN N         WWWWWWWW MMMMMMMM MMMMMMMM M M      ; Area (Crateria / Brinstar / Norfair / Wrecked Ship / Maridia)
         PMMMMEMI EMMSMPSM SRMM MMB PMIPMEES  EMEMMIP PMBEM    IMBMEIMM EPMMIRMM MMIMB MS  MMPPMEI E         MRMMESSI MSEMSMMB MRMPMSIM E I      ; Item (Energy / Reserve / Missile / Super / Power bomb / Item / Beam)
     }
-    $7E:D8B0..EF: Opened door bit array. $C6..EF are unused. See "Door PLMs.asm"
+    $7E:D8B0..EF: Opened door bit array. Bytes 16h..3Fh are unused. See "Door PLMs.asm"
     {
         $00      $01      $02      $03      $04      $05      $06      $07      $08      $09      $0A      $0B      $0C       $10      $11      $12      $13      $14      $15
         01234567 01234567 01234567 01234567 01234567 01234567 01234567 01234567 01234567 01234567 01234567 01234567 01234567  01234567 01234567 01234567 01234567 01234567 01234567
@@ -4315,9 +4396,9 @@ $7E:D7C0..DE1B: RAM that is saved to SRAM
     }
     $7E:D8F0..F7: Unused. Cleared on new save file, FFh filled by demo playback
     $7E:D8F8..D907: Low: used save stations. High: used debug elevators. Indexed by area
-    $7E:D908..0F: Map station byte array
+    $7E:D908..0F: Map station byte array. Indexed by area
     $7E:D910..13: Unused
-    $7E:D914: Loading game state. Used in some initialisation routines to decide what to do. Used by gunship to decide if it should do the landing sequence, if so, sets this to 5 afterwards. Used by game over screen to decide where to reload Samus to.. Used by game options menu to decide what "start game" does
+    $7E:D914: Loading game state. Used in some initialisation routines to decide what to do. Used by gunship to decide if it should do the landing sequence, if so, sets this to 5 afterwards. Used by game over screen to decide where to reload Samus to. Used by game options menu to decide what "start game" does
     {
         0: Intro
         5: Main
@@ -4327,7 +4408,15 @@ $7E:D7C0..DE1B: RAM that is saved to SRAM
     $7E:D916: SRAM save station index
     $7E:D918: SRAM area index
     $7E:D91A: Global number of items loaded counter
-    $7E:D91C..DE1B: 'Compressed' map data. Only first 160 bytes or so are actually used by original game.
+    $7E:D91C..DE1B: Exported map data. Bytes 147h..4FFh are unused. See $81:8131
+    {
+        $7E:D91C..65: Crateria
+        $7E:D966..AD: Brinstar
+        $7E:D9AE..F9: Norfair
+        $7E:D9FA..DA0B: Wrecked Ship
+        $7E:DA0C..4D: Maridia
+        $7E:DA4E..62: Tourian
+    }
 }
 $7E:DE1C..6B: PLM instruction timers
 $7E:DE6C..BB: PLM draw instruction pointers
@@ -4396,13 +4485,51 @@ $7E:F380..F49F: Enemy projectile data. Cleared in enemy initialisation ($A0:8A9E
     $7E:F438..9F: Unused
 }
 $7E:F4A0..FFFF: Unused
+
+; Gameplay
+{
 $7F:0000: Size of level data in bytes (and size of custom background, and 2x size of BTS)
 $7F:0002..6401: Level data (layer 1). Word per block: ttttyxnnnnnnnnnn. t = block type (see "Special blocks.asm"), yx are Y/X flips, n = tile table index (see $7E:A000)
 $7F:6402..9601: BTS. Byte per block. See "Special blocks.asm"
 $7F:9602..FA01: Custom background (layer 2). Word per block: 0000yxnnnnnnnnnn. yx are Y/X flips, n = block index (into tile table, see $7E:A000)
+}
 
-$7F:C000..C7FF: Game options menu tilemap - options screen
-$7F:C800..CFFF: Game options menu tilemap - controller settings - English
-$7F:D000..D7FF: Game options menu tilemap - controller settings - Japanese
-$7F:D800..DFFF: Game options menu tilemap - special settings - English
-$7F:E000..E7FF: Game options menu tilemap - special settings - Japanese
+; Non-gameplay
+{
+    $7F:0000..3FFF: Ending gunship tiles
+    $7F:0000..1FFF: Credits tilemap
+    
+    $7F:4000..BFFF: Post-credits Samus beam (interleaved tiles/tilemap)
+    $7F:4000..7FFF: Ending gunship tilemap
+    $7F:4000..48FF: Ceres cutscene gunship/Ceres tilemap
+    {
+        $7F:4000..42FF: Gunship front
+        $7F:4300..45FF: Gunship back
+        $7F:4600..4BFF: Ceres
+        $7E:4C00..4FFF: Clear tilemap (with tile 8Ch). Only first 300h bytes used
+    }
+    
+    $7F:8000..DFFF: Zebes explosion tiles
+    $7F:8000..88FF: Intro font 1 tiles
+
+    $7F:9000..93FF: Title baby metroid tiles. 4 frames of 100h bytes, the last of which is seemingly unused
+
+    $7F:A000..B1FF: Intro font 2 tiles
+    
+    $7F:C000..D7FF: Credits / post-credits font 3
+    {
+        $7F:D000..D3FF: Item percentage Japanese text (loaded only for the post-credits)
+    }
+    
+    $7F:C000..C7FF: Game options menu tilemap - options screen
+    $7F:C800..CFFF: Game options menu tilemap - controller settings - English
+    $7F:D000..D7FF: Game options menu tilemap - controller settings - Japanese
+    $7F:D800..DFFF: Game options menu tilemap - special settings - English
+    
+    $7F:E000..E7FF: Game options menu tilemap - special settings - Japanese
+    $7F:E000..E7FF: Wide part of Zebes explosion tilemap
+    
+    $7F:E800..EFFF: Concentric wide part of Zebes explosion tilemap
+    $7F:F000..F7FF: Eclipse of Zebes during explosion tilemap
+    $7F:F800..FFFF: Ending blank tilemap
+}
