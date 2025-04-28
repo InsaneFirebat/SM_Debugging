@@ -223,7 +223,7 @@ CrocomireMelting_MaxAdjustedDestinationYOffset = $0698
 CrocomireMelting_TilesLoadingTableBaseIndex = $069A
 CrocomireMelting_YOffsets = $069C
 
-Timer_071C = $071C
+BlockTimer_071C = $071C
 
 SamusTop_Transfer_Flag = $071D
 SamusBottom_Transfer_Flag = $071E
@@ -260,7 +260,7 @@ Menu_MapScroll_UpArrow_Mode = $075B
 Menu_MapScroll_DownArrow_Mode = $075D
 Menu_MapScroll_RightArrow_Mode = $075F
 Menu_MapScroll_LeftArrow_Mode = $0761
-Menu_Pause_Screen = $0763
+Menu_Pause_Mode = $0763
 Menu_Backup_58 = $0765
 Menu_Backup_59 = $0766
 Menu_Backup_5A = $0767
@@ -310,7 +310,7 @@ Down_Scroller = $07AF
 CRE_PrevBitset = $07B1
 CRE_Bitset = $07B3
 Door_List_Pointer = $07B5
-Event_Pointer = $07B7
+State_Condition = $07B7
 LevelData_Size = $07B9
 RoomState_Pointer = $07BB
 Level_Data_Pointer = $07BD
@@ -373,7 +373,7 @@ Door_Transition_Finished_Flag = $0931
 VRAM_Block_Update_0933 = $0933
 VRAM_Block_X_Blocks_0935 = $0935
 VRAM_Block_Update_0937 = $0937
-Proposed_Layer1_X = $0939
+Proposed_Layer1_Position = $0939
 Block_to_Update = $093B
 
 Ceres_Status = $093F
@@ -992,7 +992,7 @@ Debug_Disable_Proj_Samus_Interactions = $18AE
 
 HDMAObjects_Flag = $18B0
 HDMAObject_Index = $18B2
-HDMAObject_Channels_Low = $18B4
+HDMAObject_Channels_Bitflags = $18B4
 HDMAObject_ChannelIndices_Low = $18C0
 HDMAObject_InstrList_Pointers = $18CC
 HDMAObject_Table_Pointers = $18D8

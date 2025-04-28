@@ -3,7 +3,7 @@
 
 ## What do I do with it?
 
-Mesen: Open the Debugger window and select `Import/Export` > `Import Labels`. Select the `.msl` or '.mlb' file to add labels to the debugger view and trace logs.
+Mesen: If using Mesen-S, open the Debugger window and select `Import/Export` > `Import Labels`. Select the `Mesen.msl` file to add labels to the debugger view and trace logs. If using Mesen2, you can drag the `Mesen.msl` file directly into the debugger window to load it.
 
 bsnes-plus: Rename the `.sym` file to match your ROM and place it in the same directory. Load the ROM to load the symbols, which will take longer with the `_wram` version.
 
